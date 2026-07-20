@@ -76,7 +76,7 @@
   .login-error{background:rgba(244,88,110,0.12);border:1px solid rgba(244,88,110,0.35);color:var(--red);
     padding:9px 12px;border-radius:8px;font-size:12.5px;margin-bottom:14px;display:none;}
   .login-error.show{display:block;}
-  .login-hint{margin-top:16px;text-align:center;font-size:11px;color:var(--text-faint);line-height:1.6;}
+  .login-hint{display:none;margin-top:16px;text-align:center;font-size:11px;color:var(--text-faint);line-height:1.6;}
 
   /* ---------- HEADER ---------- */
   header{
@@ -333,6 +333,7 @@
       <button class="btn sm" onclick="openBuildingModal(null)" data-t="addBuilding"></button>
       <button class="btn sm" onclick="openBuildingModal(currentBuildingId)" data-t="editBuilding"></button>
       <button class="btn sm danger" onclick="deleteBuilding()" data-t="deleteBuilding"></button>
+      <button class="btn sm danger" onclick="deleteAllTickets()" data-t="deleteAllTickets"></button>
     </div>
     <div class="import-banner" id="importBanner"></div>
   </header>
@@ -588,6 +589,7 @@ const STR = {
     manageUsers:'Manage Users', manageUsersSub:'Add or remove users who can access this system.',
     logout:'Log Out',
     addBuilding:'+ Add Building', editBuilding:'Edit Building', deleteBuilding:'Delete Building',
+    deleteAllTickets:'Delete All Faults',
     buildingModalSub:'Set the building name and its assigned engineers.',
     fieldBuildingName:'Building Name / Project', siteManager:'Site Manager Engineer', buildingEngineer:'Building Engineer',
     reportPeriod:'Report Period',
@@ -621,6 +623,7 @@ const STR = {
     save:'Save', cancel:'Cancel', close:'Close',
     confirmDeleteTicket:'Delete this ticket? This cannot be undone.',
     confirmDeleteBuilding:'Delete this building and all its tickets? This cannot be undone.',
+    confirmDeleteAllTickets:'Delete ALL faults/tickets for this building? This cannot be undone.',
     cannotDeleteLastBuilding:'You must keep at least one building.',
     addUser:'Add User', newUsername:'New Username', newPassword:'New Password',
     userExists:'That username already exists.', fillBothFields:'Please fill in both fields.',
@@ -639,6 +642,7 @@ const STR = {
     manageUsers:'إدارة المستخدمين', manageUsersSub:'إضافة أو إزالة المستخدمين الذين يمكنهم الدخول لهذا النظام.',
     logout:'تسجيل الخروج',
     addBuilding:'+ إضافة مبنى', editBuilding:'تعديل المبنى', deleteBuilding:'حذف المبنى',
+    deleteAllTickets:'حذف جميع الأعطال',
     buildingModalSub:'حدد اسم المبنى والمهندسين المسؤولين عنه.',
     fieldBuildingName:'اسم المبنى / المشروع', siteManager:'مهندس مدير الموقع', buildingEngineer:'مهندسة/مهندس المبنى',
     reportPeriod:'فترة التقرير',
@@ -672,6 +676,7 @@ const STR = {
     save:'حفظ', cancel:'إلغاء', close:'إغلاق',
     confirmDeleteTicket:'حذف هذا البلاغ؟ لا يمكن التراجع عن هذا الإجراء.',
     confirmDeleteBuilding:'حذف هذا المبنى وجميع بلاغاته؟ لا يمكن التراجع عن هذا الإجراء.',
+    confirmDeleteAllTickets:'حذف جميع الأعطال/البلاغات لهذا المبنى؟ لا يمكن التراجع عن هذا الإجراء.',
     cannotDeleteLastBuilding:'يجب الاحتفاظ بمبنى واحد على الأقل.',
     addUser:'إضافة مستخدم', newUsername:'اسم مستخدم جديد', newPassword:'كلمة مرور جديدة',
     userExists:'اسم المستخدم هذا موجود بالفعل.', fillBothFields:'يرجى تعبئة الحقلين.',
@@ -816,6 +821,14 @@ function deleteBuilding(){
   BUILDINGS = BUILDINGS.filter(b=>b.id!==currentBuildingId);
   currentBuildingId = BUILDINGS[0].id;
   renderBuildingSelect();
+  renderAll();
+}
+function deleteAllTickets(){
+  const b = getCurrentBuilding();
+  if(!b){ alert(t('selectBuildingFirst')); return; }
+  if(!b.tickets.length) return;
+  if(!confirm(t('confirmDeleteAllTickets'))) return;
+  b.tickets = [];
   renderAll();
 }
 
@@ -1116,8 +1129,6 @@ function setLang(lang){
     el.classList.toggle('active', (lang==='ar')===isAr);
   });
   renderStaticText();
-  const lh = document.getElementById('loginHint');
-  if(lh) lh.textContent = lang==='ar' ? 'دخول تجريبي: admin / admin123' : 'Demo login: admin / admin123';
   if(currentUser){
     renderBuildingSelect();
     renderAll();
@@ -1324,7 +1335,6 @@ async function handleFileSelect(evt){
 
 /* ================= INIT ================= */
 setLang('en');
-document.getElementById('loginHint').textContent = LANG==='ar' ? 'دخول تجريبي: admin / admin123' : 'Demo login: admin / admin123';
 
 </script>
 <script>
