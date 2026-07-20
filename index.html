@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AMOS | Maintenance Management System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a0f1a">
+<meta name="background-color" content="#0a0f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AMOS">
+<meta name="application-name" content="AMOS">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0f1a; --panel:#111a2c; --panel-2:#0d1524;
+    --border:#22304a; --border-soft:#1a2438;
+    --text:#e8edf7; --text-dim:#8fa0bd; --text-faint:#5c6c8a;
+    --accent:#f5940c; --accent-2:#ffb648;
+    --green:#28c775; --green-dim:#1c7f4d;
+    --amber:#f5a623; --red:#f4586e; --blue:#3d8bf2; --purple:#a78bfa; --grey:#c7d0e0;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 500px at 12% -10%, rgba(245,148,12,0.10), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(61,139,242,0.08), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    min-height:100vh;
+  }
+  html[dir="rtl"] body{ font-family:'Segoe UI', Tahoma, 'Geeza Pro', Arial, sans-serif; }
+  body::after{
+    content:""; position:fixed; top:50%;left:50%; width:640px;height:640px;
+    background-image:url('icons/logo.png');
+    background-repeat:no-repeat; background-position:center; background-size:contain;
+    transform:translate(-50%,-50%); opacity:0.035; pointer-events:none; z-index:0;
+  }
+  header, main, footer{ position:relative; z-index:1; }
+  .wrap{max-width:1400px;margin:0 auto;padding:0 24px;}
+  .hidden{display:none !important;}
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; position:relative; z-index:2;
+  }
+  .login-card{
+    width:380px; background:var(--panel); border:1px solid var(--border-soft); border-radius:16px;
+    padding:34px 32px; box-shadow:0 20px 60px rgba(0,0,0,0.4);
+  }
+  .login-logo{width:64px;height:64px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;padding:8px;}
+  .login-logo img{width:100%;height:100%;object-fit:contain;}
+  .login-card h2{text-align:center;margin:0 0 4px;font-size:18px;color:#fff;}
+  .login-card .sub{text-align:center;color:var(--text-faint);font-size:12.5px;margin-bottom:24px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;font-weight:600;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:10px 12px; border-radius:8px; font-size:13.5px; outline:none; font-family:inherit;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--accent);}
+  .login-btn{
+    width:100%; padding:11px; border:none; border-radius:9px; background:linear-gradient(135deg,var(--accent),#d9800a);
+    color:#1a1200; font-weight:800; font-size:14px; cursor:pointer; margin-top:6px;
+  }
+  .login-btn:hover{filter:brightness(1.06);}
+  .login-error{background:rgba(244,88,110,0.12);border:1px solid rgba(244,88,110,0.35);color:var(--red);
+    padding:9px 12px;border-radius:8px;font-size:12.5px;margin-bottom:14px;display:none;}
+  .login-error.show{display:block;}
+  .login-hint{margin-top:16px;text-align:center;font-size:11px;color:var(--text-faint);line-height:1.6;}
+
+  /* ---------- HEADER ---------- */
+  header{
+    border-bottom:1px solid var(--border-soft);
+    background:linear-gradient(180deg, rgba(17,26,44,0.9), rgba(17,26,44,0.4));
+    backdrop-filter:blur(6px); padding:16px 0; position:sticky; top:0; z-index:50;
+  }
+  .header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .logo{width:48px;height:48px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 18px rgba(0,0,0,0.25);flex-shrink:0;padding:6px;}
+  .logo img{width:100%;height:100%;object-fit:contain;}
+  .brand-text .tag{display:inline-block;background:rgba(245,148,12,0.14);color:var(--accent-2);
+    font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:5px;margin-bottom:4px;}
+  .brand-text h1{margin:0;font-size:17px;font-weight:800;color:#fff;}
+  .brand-text p{margin:1px 0 0;font-size:11.5px;color:var(--text-dim);}
+  .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .btn{border:1px solid var(--border);background:var(--panel-2);color:var(--text);padding:8px 13px;border-radius:9px;
+    font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap;}
+  .btn:hover{border-color:var(--accent);color:var(--accent-2);}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),#d9800a);border:none;color:#1a1200;}
+  .btn.primary:hover{filter:brightness(1.08);color:#1a1200;}
+  .btn.danger:hover{border-color:var(--red);color:var(--red);}
+  .btn.sm{padding:6px 10px;font-size:11.5px;}
+  .lang-toggle{display:flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:var(--panel-2);}
+  .lang-toggle button{border:none;background:transparent;color:var(--text-dim);padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+  .lang-toggle button.active{background:var(--accent);color:#1a1200;}
+  .user-pill{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--border);
+    padding:6px 12px 6px 6px;border-radius:20px;font-size:12px;}
+  .user-pill .av{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#1a1200;display:flex;
+    align-items:center;justify-content:center;font-weight:800;font-size:11px;}
+  #fileInput{display:none;}
+
+  .building-bar{
+    display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;
+    background:var(--panel-2);border:1px solid var(--border-soft);border-radius:12px;padding:10px 14px;
+  }
+  .building-bar select{background:var(--panel);border:1px solid var(--border);color:#fff;padding:8px 12px;
+    border-radius:8px;font-size:13px;font-weight:700;min-width:200px;}
+  .building-meta{display:flex;gap:18px;flex-wrap:wrap;flex:1;font-size:11.5px;color:var(--text-dim);}
+  .building-meta b{color:#fff;}
+
+  main{padding-top:24px;padding-bottom:60px;}
+  .section-title{display:flex;align-items:center;gap:9px;margin:30px 0 14px;}
+  .section-title h2{font-size:15px;margin:0;font-weight:700;color:#fff;}
+  .section-title .bar{width:4px;height:16px;background:var(--accent);border-radius:2px;flex-shrink:0;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+  .kpi{background:var(--panel);border:1px solid var(--border-soft);border-radius:var(--radius);padding:16px 16px 14px;position:relative;overflow:hidden;}
+  .kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc,var(--accent));}
+  .kpi .klabel{font-size:11.5px;color:var(--text-dim);margin-bottom:9px;font-weight:600;}
+  .kpi .kval{font-size:27px;font-weight:800;color:#fff;display:flex;align-items:baseline;gap:7px;}
+  .kpi .kval small{font-size:13px;font-weight:700;color:var(--kc,var(--accent));}
+  .kpi .ksub{margin-top:7px;font-size:11px;color:var(--text-faint);display:flex;align-items:center;gap:5px;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--kc,var(--accent));flex-shrink:0;}
+
+  .chart-row{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:stretch;}
+  .panel{background:var(--panel);border:1px solid var(--border-soft);border-radius:var(--radius);padding:20px 22px;}
+  .panel h3{margin:0 0 4px;font-size:14px;font-weight:700;color:#fff;}
+  .panel .sub{font-size:11.5px;color:var(--text-faint);margin-bottom:16px;}
+
+  .barlist .brow{display:grid;grid-template-columns:96px 1fr 100px;align-items:center;gap:12px;margin-bottom:13px;}
+  html[dir="rtl"] .barlist .brow{grid-template-columns:100px 1fr 96px;}
+  .barlist .blabel{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .barlist .btrack{height:15px;background:var(--panel-2);border-radius:8px;overflow:hidden;display:flex;border:1px solid var(--border-soft);}
+  .barlist .bfill-ok{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--green));}
+  .barlist .bfill-still{height:100%;background:linear-gradient(90deg,#8a4d0a,var(--amber));}
+  .barlist .bnum{font-size:11.5px;color:var(--text-dim);text-align:right;}
+  html[dir="rtl"] .barlist .bnum{text-align:left;}
+  .barlist .bnum b{color:#fff;}
+  .legend-row{display:flex;gap:16px;margin-top:4px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);}
+  .legend-sw{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+  .donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center;}
+  .donut-legend{display:grid;gap:8px;flex:1;min-width:160px;}
+  .dl-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;}
+  .dl-left{display:flex;align-items:center;gap:8px;color:var(--text-dim);}
+  .dl-sw{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+  .dl-right{color:#fff;font-weight:700;}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .panel p{font-size:12.8px;line-height:1.7;color:var(--text-dim);margin:0 0 12px;}
+  .panel p b{color:#fff;}
+  .cm-list{list-style:none;margin:0;padding:0;display:grid;gap:11px;}
+  .cm-list li{font-size:12.3px;line-height:1.6;color:var(--text-dim);padding-left:16px;position:relative;}
+  html[dir="rtl"] .cm-list li{padding-left:0;padding-right:16px;}
+  .cm-list li::before{content:"";position:absolute;left:0;top:6px;width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  html[dir="rtl"] .cm-list li::before{left:auto;right:0;}
+  .cm-list li b{color:#fff;}
+
+  .ledger-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{border:1px solid var(--border);background:var(--panel-2);color:var(--text-dim);padding:6px 12px;border-radius:20px;
+    font-size:11.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:.15s;}
+  .chip .n{background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:10px;font-size:10px;}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#1a1200;}
+  .chip.active .n{background:rgba(0,0,0,0.18);color:#1a1200;}
+  .head-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .searchbox{position:relative;}
+  .searchbox input{background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:8px 13px 8px 32px;border-radius:9px;font-size:12px;width:220px;outline:none;}
+  html[dir="rtl"] .searchbox input{padding:8px 32px 8px 13px;text-align:right;}
+  .searchbox input:focus{border-color:var(--accent);}
+  .searchbox svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;stroke:var(--text-faint);}
+  html[dir="rtl"] .searchbox svg{left:auto;right:10px;}
+
+  .table-wrap{border:1px solid var(--border-soft);border-radius:var(--radius);overflow:hidden;background:var(--panel);}
+  .table-scroll{max-height:540px;overflow-y:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  thead th{position:sticky;top:0;background:#131d33;color:var(--text-faint);text-align:left;font-size:10px;
+    letter-spacing:.05em;text-transform:uppercase;padding:11px 14px;border-bottom:1px solid var(--border-soft);z-index:2;}
+  html[dir="rtl"] thead th{text-align:right;}
+  tbody td{padding:9px 14px;border-bottom:1px solid var(--border-soft);color:var(--text-dim);}
+  tbody tr:hover{background:rgba(245,148,12,0.045);}
+  tbody tr:last-child td{border-bottom:none;}
+  .no-cell{color:var(--text-faint);font-variant-numeric:tabular-nums;}
+  .loc-cell{color:#fff;font-weight:700;font-variant-numeric:tabular-nums;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;}
+  .b-civil{background:rgba(199,208,224,0.14);color:var(--grey);}
+  .b-plumb{background:rgba(61,139,242,0.16);color:#7fb1ff;}
+  .b-elect{background:rgba(245,166,35,0.16);color:var(--amber);}
+  .b-hvac{background:rgba(244,88,110,0.16);color:#ff8b9c;}
+  .b-lift{background:rgba(167,139,250,0.18);color:var(--purple);}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+  .s-ok{background:rgba(40,199,117,0.14);color:var(--green);}
+  .s-maint{background:rgba(245,166,35,0.14);color:var(--amber);}
+  .s-spr{background:rgba(244,88,110,0.14);color:var(--red);}
+  .s-pending{background:rgba(143,160,189,0.14);color:var(--text-dim);}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:var(--panel-2);
+    color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .icon-btn:hover{border-color:var(--accent);color:var(--accent-2);}
+  .icon-btn.del:hover{border-color:var(--red);color:var(--red);}
+  .icon-btn svg{width:13px;height:13px;}
+  .empty-row td{text-align:center;padding:36px;color:var(--text-faint);}
+
+  .import-banner{display:none;align-items:center;gap:10px;margin-top:14px;padding:10px 15px;border-radius:10px;
+    font-size:12px;font-weight:600;border:1px solid var(--border-soft);}
+  .import-banner.show{display:flex;}
+  .import-banner.ok{background:rgba(40,199,117,0.10);border-color:rgba(40,199,117,0.35);color:var(--green);}
+  .import-banner.err{background:rgba(244,88,110,0.10);border-color:rgba(244,88,110,0.35);color:var(--red);}
+  .import-banner.busy{background:rgba(245,148,12,0.10);border-color:rgba(245,148,12,0.35);color:var(--accent-2);}
+  .import-banner button{margin-inline-start:auto;background:transparent;border:none;color:inherit;cursor:pointer;font-size:11.5px;font-weight:700;text-decoration:underline;}
+
+  footer{text-align:center;color:var(--text-faint);font-size:11px;margin-top:30px;padding-top:18px;border-top:1px solid var(--border-soft);}
+
+  /* ---------- MODALS ---------- */
+  .modal-overlay{position:fixed;inset:0;background:rgba(4,7,14,0.72);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+  .modal-overlay.show{display:flex;}
+  .modal-card{width:100%;max-width:460px;background:var(--panel);border:1px solid var(--border-soft);
+    border-radius:16px;padding:26px;max-height:88vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,0.5);}
+  .modal-card.wide{max-width:640px;}
+  .modal-card h3{margin:0 0 4px;font-size:16px;color:#fff;}
+  .modal-card .msub{font-size:11.5px;color:var(--text-faint);margin-bottom:18px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .user-row, .building-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 12px;border:1px solid var(--border-soft);border-radius:9px;margin-bottom:8px;background:var(--panel-2);}
+  .user-row .uname{font-weight:700;color:#fff;font-size:13px;}
+  .user-row .urole{font-size:10.5px;color:var(--text-faint);}
+  .divider{height:1px;background:var(--border-soft);margin:18px 0;}
+
+  @media(max-width:1000px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr);}
+    .chart-row,.two-col,.grid-2{grid-template-columns:1fr;}
+  }
+  @media print{
+    header,.btn,.filters,.searchbox,.lang-toggle,.row-actions,.building-bar,.import-banner{display:none;}
+    .table-scroll{max-height:none;overflow:visible;}
+    body{background:#fff;color:#000;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo"><img src="icons/logo.png" alt="AMOS"></div>
+    <h2 data-t="loginTitle"></h2>
+    <div class="sub" data-t="loginSub"></div>
+    <div class="login-error" id="loginError"></div>
+    <div class="field">
+      <label data-t="username"></label>
+      <input type="text" id="loginUser" autocomplete="username">
+    </div>
+    <div class="field">
+      <label data-t="password"></label>
+      <input type="password" id="loginPass" autocomplete="current-password">
+    </div>
+    <button class="login-btn" data-t="loginBtn" onclick="doLogin()"></button>
+    <div class="login-hint" id="loginHint"></div>
+    <div style="text-align:center;margin-top:14px;">
+      <div class="lang-toggle" style="display:inline-flex;">
+        <button id="btnEnLogin" onclick="setLang('en')">EN</button>
+        <button id="btnArLogin" onclick="setLang('ar')">ع</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app" class="hidden">
+<div class="wrap">
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo"><img src="icons/logo.png" alt="AMOS logo"></div>
+        <div class="brand-text">
+          <span class="tag">AMOS</span>
+          <h1 data-t="companyName"></h1>
+          <p data-t="appSubtitle"></p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="lang-toggle">
+          <button id="btnEn" onclick="setLang('en')">EN</button>
+          <button id="btnAr" onclick="setLang('ar')">ع</button>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.pdf" onchange="handleFileSelect(event)">
+        <button class="btn" onclick="document.getElementById('fileInput').click()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span data-t="importData"></span>
+        </button>
+        <button class="btn" onclick="exportCSV()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span data-t="exportCsv"></span>
+        </button>
+        <button class="btn" onclick="saveBackup()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          <span data-t="saveBackup"></span>
+        </button>
+        <input type="file" id="backupInput" accept=".json" class="hidden" onchange="loadBackupFile(event)">
+        <button class="btn" onclick="document.getElementById('backupInput').click()">
+          <span data-t="loadBackup"></span>
+        </button>
+        <div class="user-pill">
+          <div class="av" id="userAvatar"></div>
+          <span id="userNameLabel"></span>
+        </div>
+        <button class="btn" onclick="openUsersModal()">
+          <span data-t="manageUsers"></span>
+        </button>
+        <button class="btn danger" onclick="doLogout()">
+          <span data-t="logout"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="building-bar">
+      <select id="buildingSelect" onchange="switchBuilding(this.value)"></select>
+      <div class="building-meta" id="buildingMetaBar"></div>
+      <button class="btn sm" onclick="openBuildingModal(null)" data-t="addBuilding"></button>
+      <button class="btn sm" onclick="openBuildingModal(currentBuildingId)" data-t="editBuilding"></button>
+      <button class="btn sm danger" onclick="deleteBuilding()" data-t="deleteBuilding"></button>
+    </div>
+    <div class="import-banner" id="importBanner"></div>
+  </header>
+
+  <main>
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="section-title"><div class="bar"></div><h2 data-t="chartsSectionTitle"></h2></div>
+    <div class="chart-row">
+      <div class="panel">
+        <h3 data-t="ordersByDept"></h3>
+        <div class="sub" data-t="ordersByDeptSub"></div>
+        <div class="barlist" id="barList"></div>
+        <div class="legend-row">
+          <div class="legend-item"><span class="legend-sw" style="background:var(--green)"></span><span data-t="legendCompleted"></span></div>
+          <div class="legend-item"><span class="legend-sw" style="background:var(--amber)"></span><span data-t="legendPending"></span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3 data-t="faultsDistribution"></h3>
+        <div class="sub" data-t="faultsDistributionSub"></div>
+        <div class="donut-wrap">
+          <svg id="donutSvg" width="176" height="176" viewBox="0 0 180 180"></svg>
+          <div class="donut-legend" id="donutLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><div class="bar"></div><h2 data-t="summarySectionTitle"></h2></div>
+    <div class="two-col">
+      <div class="panel">
+        <h3 data-t="execSummaryTitle"></h3>
+        <div id="execSummaryBody"></div>
+      </div>
+      <div class="panel">
+        <h3 data-t="countermeasuresTitle"></h3>
+        <ul class="cm-list" id="countermeasuresBody"></ul>
+      </div>
+    </div>
+
+    <div class="section-title"><div class="bar"></div><h2 data-t="ledgerSectionTitle"></h2></div>
+    <div class="panel" style="padding:18px 20px 8px;">
+      <div class="ledger-head">
+        <div class="filters" id="filterChips"></div>
+        <div class="head-right">
+          <div class="searchbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="searchInput" type="text">
+          </div>
+          <button class="btn primary sm" onclick="openTicketModal(null)">+ <span data-t="addTicket"></span></button>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-bottom:18px;">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50px;" data-t="colNo"></th>
+                <th style="width:100px;" data-t="colDept"></th>
+                <th style="width:110px;" data-t="colLocation"></th>
+                <th data-t="colIssue"></th>
+                <th style="width:140px;" data-t="colStatus"></th>
+                <th style="width:80px;"></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="resultCount" style="font-size:11px;color:var(--text-faint);padding:0 2px 14px;"></div>
+    </div>
+
+    <footer id="footerText"></footer>
+  </main>
+</div>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-overlay" id="ticketModalOverlay">
+  <div class="modal-card">
+    <h3 id="ticketModalTitle"></h3>
+    <div class="msub" data-t="ticketModalSub"></div>
+    <div class="field">
+      <label data-t="fieldDept"></label>
+      <input type="text" id="fTicketDept" list="deptSuggestions" placeholder="CIVIL / PLUMB / ELECT / HVAC / LIFT">
+      <datalist id="deptSuggestions"></datalist>
+    </div>
+    <div class="field">
+      <label data-t="fieldLocation"></label>
+      <input type="text" id="fTicketLoc" placeholder="G53 / B168 / S244 …">
+    </div>
+    <div class="field">
+      <label data-t="fieldNotice"></label>
+      <input type="text" id="fTicketNotice" placeholder="e.g. Lamp Flashing">
+    </div>
+    <div class="field">
+      <label data-t="fieldStatus"></label>
+      <select id="fTicketStatus">
+        <option value="OK" data-t="statusCompleted"></option>
+        <option value="MAINT" data-t="statusMaint"></option>
+        <option value="SPR" data-t="statusSpr"></option>
+        <option value="PENDING" data-t="statusVerify"></option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('ticketModalOverlay')" data-t="cancel"></button>
+      <button class="btn primary" onclick="saveTicketFromModal()" data-t="save"></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="buildingModalOverlay">
+  <div class="modal-card">
+    <h3 id="buildingModalTitle"></h3>
+    <div class="msub" data-t="buildingModalSub"></div>
+    <div class="field">
+      <label data-t="fieldBuildingName"></label>
+      <input type="text" id="fBuildingName">
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label data-t="siteManager"></label>
+        <input type="text" id="fSiteManager">
+      </div>
+      <div class="field">
+        <label data-t="buildingEngineer"></label>
+        <input type="text" id="fBuildingEngineer">
+      </div>
+    </div>
+    <div class="field">
+      <label data-t="reportPeriod"></label>
+      <input type="text" id="fPeriod" placeholder="June 2026">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('buildingModalOverlay')" data-t="cancel"></button>
+      <button class="btn primary" onclick="saveBuildingFromModal()" data-t="save"></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="usersModalOverlay">
+  <div class="modal-card wide">
+    <h3 data-t="manageUsers"></h3>
+    <div class="msub" data-t="manageUsersSub"></div>
+    <div id="usersList"></div>
+    <div class="divider"></div>
+    <div class="grid-2">
+      <div class="field">
+        <label data-t="newUsername"></label>
+        <input type="text" id="fNewUsername">
+      </div>
+      <div class="field">
+        <label data-t="newPassword"></label>
+        <input type="password" id="fNewPassword">
+      </div>
+    </div>
+    <button class="btn primary sm" onclick="addUser()" data-t="addUser"></button>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('usersModalOverlay')" data-t="close"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.__BUILDINGS_SEED__ = [{"no":1,"dept":"CIVIL","loc":"G53","notice":"Marble Broken","status":"STILL","note":"Under Maintenance"},{"no":2,"dept":"CIVIL","loc":"G53","notice":"Wall Cracked","status":"OK","note":""},{"no":3,"dept":"CIVIL","loc":"G66","notice":"Door Stopped Need Repair","status":"STILL","note":"Under Maintenance"},{"no":4,"dept":"CIVIL","loc":"G63","notice":"Marble Broken","status":"OK","note":""},{"no":5,"dept":"PLUMB","loc":"G96","notice":"Leak From Soap Box","status":"OK","note":""},{"no":6,"dept":"CIVIL","loc":"B168","notice":"Tissue Holder Broken","status":"STILL","note":"Under Maintenance"},{"no":7,"dept":"ELECT","loc":"B149","notice":"Sopt Light Not Working","status":"OK","note":""},{"no":8,"dept":"ELECT","loc":"B136","notice":"Stair Light Not Working","status":"OK","note":""},{"no":9,"dept":"PLUMB","loc":"B127","notice":"Bathroom Blocked","status":"OK","note":""},{"no":10,"dept":"ELECT","loc":"B103A","notice":"Lamp Flashing","status":"OK","note":""},{"no":11,"dept":"HVAC","loc":"S137","notice":"Ac Hot","status":"PENDING","note":""},{"no":12,"dept":"PLUMB","loc":"S297","notice":"Basin Blocked","status":"OK","note":""},{"no":13,"dept":"CIVIL","loc":"S328","notice":"Door Need Paint","status":"OK","note":""},{"no":14,"dept":"ELECT","loc":"F56","notice":"Spot Light Not Working","status":"OK","note":""},{"no":15,"dept":"ELECT","loc":"F74","notice":"Lamp Flashing","status":"OK","note":""},{"no":16,"dept":"PLUMB","loc":"S11","notice":"Flash Tank Not Working","status":"OK","note":""},{"no":17,"dept":"CIVIL","loc":"S298","notice":"Door Need Paint","status":"OK","note":""},{"no":18,"dept":"ELECT","loc":"S156","notice":"Lamp Flashing","status":"OK","note":""},{"no":19,"dept":"ELECT","loc":"G320","notice":"Light Flashing","status":"OK","note":""},{"no":20,"dept":"ELECT","loc":"S221","notice":"Thermostat Cover Missing","status":"OK","note":""},{"no":21,"dept":"ELECT","loc":"S250","notice":"Socket Need Repair","status":"OK","note":""},{"no":22,"dept":"CIVIL","loc":"S229","notice":"Door Stopper Need Install","status":"OK","note":""},{"no":23,"dept":"ELECT","loc":"S223","notice":"Lamp Flashing","status":"OK","note":""},{"no":24,"dept":"CIVIL","loc":"S229","notice":"Tissue Holder Need Repair","status":"OK","note":""},{"no":25,"dept":"CIVIL","loc":"S182","notice":"Door Need Paint","status":"OK","note":""},{"no":26,"dept":"LIFT","loc":"LIFT153","notice":"Lift 153 Not Working","status":"OK","note":""},{"no":27,"dept":"PLUMB","loc":"BAS11","notice":"Basin Blocked","status":"OK","note":""},{"no":28,"dept":"ELECT","loc":"S3","notice":"Lamp Flashing","status":"OK","note":""},{"no":29,"dept":"LIFT","loc":"LIFT145","notice":"Door Lift Need Check","status":"OK","note":""},{"no":30,"dept":"ELECT","loc":"FRONTF140","notice":"Lamp Flashing","status":"OK","note":""},{"no":31,"dept":"HVAC","loc":"S312","notice":"Cold","status":"PENDING","note":""},{"no":32,"dept":"PLUMB","loc":"S243","notice":"Basin Blocked","status":"OK","note":""},{"no":33,"dept":"ELECT","loc":"FRONTG89","notice":"Lamp Flashing","status":"OK","note":""},{"no":34,"dept":"ELECT","loc":"G296","notice":"Spot Light Not Working","status":"STILL","note":"Spr"},{"no":35,"dept":"CIVIL","loc":"G309","notice":"Soap Box Missing","status":"OK","note":""},{"no":36,"dept":"LIFT","loc":"LIFT132","notice":"Frame Broken","status":"OK","note":""},{"no":37,"dept":"CIVIL","loc":"G344","notice":"Table Chair Broken","status":"OK","note":""},{"no":38,"dept":"CIVIL","loc":"G215","notice":"Wall Cracked","status":"STILL","note":"Under Maintenance"},{"no":39,"dept":"PLUMB","loc":"T57","notice":"Basin Stopper Need Repair","status":"OK","note":""},{"no":40,"dept":"ELECT","loc":"T85","notice":"Spot Light Not Working","status":"OK","note":""},{"no":41,"dept":"PLUMB","loc":"T89","notice":"Toilet Set Cover Need Repair","status":"OK","note":""},{"no":42,"dept":"ELECT","loc":"T107","notice":"Lamp Flashing","status":"OK","note":""},{"no":43,"dept":"CIVIL","loc":"G66","notice":"Tissue Holder Need Repair","status":"STILL","note":"Under Maintenance"},{"no":44,"dept":"CIVIL","loc":"F268","notice":"Soap Box Leaking","status":"STILL","note":"Under Maintenance"},{"no":45,"dept":"PLUMB","loc":"F253","notice":"Toilet Set Cover Need Repair","status":"OK","note":""},{"no":46,"dept":"CIVIL","loc":"F253","notice":"Soap Box Leaking","status":"OK","note":""},{"no":47,"dept":"CIVIL","loc":"B108","notice":"Door Need Repair","status":"OK","note":""},{"no":48,"dept":"ELECT","loc":"FRONTB105","notice":"Light Not Working","status":"STILL","note":"Spr"},{"no":49,"dept":"ELECT","loc":"FRONTB117","notice":"Lamp Flashing","status":"OK","note":""},{"no":50,"dept":"PLUMB","loc":"F172","notice":"Leak From Flash Tank","status":"OK","note":""},{"no":51,"dept":"PLUMB","loc":"B149","notice":"Leak From Flash Tank","status":"OK","note":""},{"no":52,"dept":"LIFT","loc":"LIFT145","notice":"Lights Not Working","status":"OK","note":""},{"no":53,"dept":"PLUMB","loc":"B168","notice":"Bathroom Blocked","status":"OK","note":""},{"no":54,"dept":"CIVIL","loc":"B179","notice":"Soap Box Leaking","status":"STILL","note":"Under Maintenance"},{"no":55,"dept":"PLUMB","loc":"B158","notice":"Leak From Hand Spray","status":"OK","note":""},{"no":56,"dept":"PLUMB","loc":"B158","notice":"Hand Spray Need Repair","status":"OK","note":""},{"no":57,"dept":"LIFT","loc":"LIFT128-129","notice":"Stopped","status":"OK","note":""},{"no":58,"dept":"PLUMB","loc":"B107","notice":"Bathroom Blocked","status":"OK","note":""},{"no":59,"dept":"CIVIL","loc":"B22","notice":"Ceiling Need Repair","status":"OK","note":""},{"no":60,"dept":"PLUMB","loc":"B137","notice":"Leak From Hand Spray","status":"OK","note":""},{"no":61,"dept":"CIVIL","loc":"B48","notice":"Tissue Box Need Repair","status":"STILL","note":"Under Maintenance"},{"no":62,"dept":"CIVIL","loc":"B158","notice":"Door Need Paint","status":"OK","note":""},{"no":63,"dept":"CIVIL","loc":"B118","notice":"Tissue Holder Broken Need Repair","status":"OK","note":""},{"no":64,"dept":"CIVIL","loc":"LIFT141","notice":"Ceiling Lift Need Repair","status":"OK","note":""},{"no":65,"dept":"CIVIL","loc":"S244","notice":"Door Need Paint","status":"OK","note":""},{"no":66,"dept":"ELECT","loc":"S307","notice":"Socket Need Install","status":"OK","note":""},{"no":67,"dept":"CIVIL","loc":"S280","notice":"Marble Broken","status":"STILL","note":"Under Maintenance"},{"no":68,"dept":"PLUMB","loc":"S280","notice":"Leak From Flash Tank","status":"OK","note":""},{"no":69,"dept":"PLUMB","loc":"S260","notice":"Basin Block","status":"OK","note":""},{"no":70,"dept":"ELECT","loc":"FRONTLIFT148","notice":"Lamp Flasher","status":"OK","note":""},{"no":71,"dept":"ELECT","loc":"F14","notice":"Spot Light Not Working","status":"OK","note":""},{"no":72,"dept":"PLUMB","loc":"F63","notice":"Bad Smell","status":"OK","note":""},{"no":73,"dept":"ELECT","loc":"S156","notice":"Lamp Flashing","status":"OK","note":""},{"no":74,"dept":"ELECT","loc":"S89","notice":"Spot Light Not Working","status":"OK","note":""},{"no":75,"dept":"PLUMB","loc":"S261","notice":"Leak From Hand Spray","status":"OK","note":""},{"no":76,"dept":"PLUMB","loc":"F56","notice":"Basin Blocked","status":"OK","note":""},{"no":77,"dept":"ELECT","loc":"S11","notice":"Spot Light Not Working","status":"OK","note":""},{"no":78,"dept":"PLUMB","loc":"S11","notice":"Leak From Flash Tank","status":"OK","note":""},{"no":79,"dept":"PLUMB","loc":"S243","notice":"Basin Block","status":"OK","note":""},{"no":80,"dept":"HVAC","loc":"F58","notice":"Ac Cold","status":"OK","note":""},{"no":81,"dept":"CIVIL","loc":"BEHINDLIFT146","notice":"Beehive Need Remove","status":"OK","note":""},{"no":82,"dept":"LIFT","loc":"LIFT146","notice":"Door Lift Need Check","status":"OK","note":""},{"no":83,"dept":"ELECT","loc":"NEARG133","notice":"Lamp Flashing","status":"OK","note":""},{"no":84,"dept":"ELECT","loc":"FRONTT127","notice":"Lamp Flashing","status":"OK","note":""},{"no":85,"dept":"HVAC","loc":"T53","notice":"Ac Hot","status":"OK","note":""},{"no":86,"dept":"PLUMB","loc":"T63","notice":"Bathroom Cover Set Broken","status":"OK","note":""},{"no":87,"dept":"PLUMB","loc":"G74","notice":"Basin Stopper Need Repair","status":"OK","note":""},{"no":88,"dept":"PLUMB","loc":"G96","notice":"Basin Stopper Need Repair","status":"OK","note":""},{"no":89,"dept":"PLUMB","loc":"G66","notice":"Basin Block","status":"OK","note":""},{"no":90,"dept":"CIVIL","loc":"G66","notice":"Tissue Holder Broken","status":"STILL","note":"Under Maintenance"},{"no":91,"dept":"PLUMB","loc":"T57","notice":"Bad Smell","status":"OK","note":""},{"no":92,"dept":"ELECT","loc":"BEHINDB103","notice":"Lights Not Working","status":"STILL","note":"Spr"},{"no":93,"dept":"ELECT","loc":"B1","notice":"Light Not Working","status":"STILL","note":"Spr"},{"no":94,"dept":"CIVIL","loc":"B2","notice":"Soap Box Need Repair","status":"STILL","note":"Under Maintenance"},{"no":95,"dept":"PLUMB","loc":"B2","notice":"Leak From Hand Spray","status":"STILL","note":"Under Maintenance"},{"no":96,"dept":"PLUMB","loc":"B127","notice":"Bathroom Blocked","status":"OK","note":""},{"no":97,"dept":"PLUMB","loc":"G323","notice":"Broken Bidet Hand Spray","status":"OK","note":""},{"no":98,"dept":"LIFT","loc":"LIFT153","notice":"Lift Not Working","status":"OK","note":""},{"no":99,"dept":"PLUMB","loc":"B158","notice":"Basin Blocked","status":"OK","note":""},{"no":100,"dept":"PLUMB","loc":"B27","notice":"Basin Blocked","status":"OK","note":""},{"no":101,"dept":"PLUMB","loc":"F188","notice":"Water Leakage From Rear Toilet","status":"OK","note":""},{"no":102,"dept":"PLUMB","loc":"S87","notice":"Basin Blocked","status":"STILL","note":"Under Maintenance"},{"no":103,"dept":"PLUMB","loc":"S89","notice":"Hand Spray Rusty","status":"OK","note":""},{"no":104,"dept":"CIVIL","loc":"S243","notice":"Leaking From Soap Box","status":"OK","note":""},{"no":105,"dept":"CIVIL","loc":"S260","notice":"Marble Broken","status":"STILL","note":"Under Maintenance"},{"no":106,"dept":"CIVIL","loc":"S297","notice":"Tissue Holder Broken","status":"STILL","note":"Under Maintenance"},{"no":107,"dept":"ELECT","loc":"S244","notice":"Light Not Working","status":"OK","note":""},{"no":108,"dept":"CIVIL","loc":"S172","notice":"Door Need Paint","status":"OK","note":""},{"no":109,"dept":"PLUMB","loc":"S171","notice":"Basin Blocked","status":"OK","note":""},{"no":110,"dept":"PLUMB","loc":"S171","notice":"Bathroom Blocked","status":"OK","note":""},{"no":111,"dept":"PLUMB","loc":"F56","notice":"Basin Blocked","status":"OK","note":""},{"no":112,"dept":"PLUMB","loc":"B158","notice":"Basin Blocked","status":"OK","note":""},{"no":113,"dept":"PLUMB","loc":"B2","notice":"Hand Spray Leaking","status":"OK","note":""},{"no":114,"dept":"PLUMB","loc":"B136","notice":"Bathroom Blocked","status":"OK","note":""},{"no":115,"dept":"ELECT","loc":"F203","notice":"Spot Light Not Working","status":"STILL","note":"Spr"},{"no":116,"dept":"ELECT","loc":"F188","notice":"Spot Light Not Working","status":"STILL","note":"Spr"},{"no":117,"dept":"PLUMB","loc":"B157","notice":"Faucet Need Repair","status":"OK","note":""},{"no":118,"dept":"PLUMB","loc":"B127","notice":"Basin Blocked","status":"OK","note":""},{"no":119,"dept":"PLUMB","loc":"G53","notice":"Basin Blocked","status":"OK","note":""},{"no":120,"dept":"ELECT","loc":"T108","notice":"Lamp Flashing","status":"OK","note":""},{"no":121,"dept":"ELECT","loc":"G296","notice":"Spot Light Not Working","status":"OK","note":""},{"no":122,"dept":"PLUMB","loc":"G296","notice":"Basin Stopper Need Repair","status":"OK","note":""},{"no":123,"dept":"ELECT","loc":"G152","notice":"Lamp Flashing","status":"OK","note":""},{"no":124,"dept":"HVAC","loc":"F58","notice":"Ac Cold","status":"OK","note":""},{"no":125,"dept":"CIVIL","loc":"G152","notice":"Door Need Paint","status":"STILL","note":"Spr"},{"no":126,"dept":"PLUMB","loc":"G74","notice":"Hand Spray Leaking","status":"OK","note":""},{"no":127,"dept":"ELECT","loc":"T63","notice":"Spot Light Not Working","status":"OK","note":""},{"no":128,"dept":"CIVIL","loc":"T85","notice":"Leak From Soap Box","status":"OK","note":""},{"no":129,"dept":"ELECT","loc":"T85","notice":"Spot Light Not Working","status":"OK","note":""},{"no":130,"dept":"PLUMB","loc":"FRONT138","notice":"Marble Broken","status":"STILL","note":"Under Maintenance"},{"no":131,"dept":"CIVIL","loc":"T85","notice":"Door Stopper Need Repair","status":"OK","note":""},{"no":132,"dept":"CIVIL","loc":"S89","notice":"Tissue Holder Broken","status":"OK","note":""},{"no":133,"dept":"ELECT","loc":"S283","notice":"Lamp Flashing","status":"OK","note":""},{"no":134,"dept":"ELECT","loc":"LIFT145","notice":"Light Not Working","status":"OK","note":""},{"no":135,"dept":"CIVIL","loc":"S260","notice":"Soap Box Leaking","status":"OK","note":""},{"no":136,"dept":"ELECT","loc":"F29","notice":"Socket Need Close","status":"OK","note":""},{"no":137,"dept":"HVAC","loc":"S84A","notice":"Ac Cold","status":"PENDING","note":""},{"no":138,"dept":"ELECT","loc":"BESIDELIFT149BF","notice":"Lamp Flashing","status":"OK","note":""},{"no":139,"dept":"ELECT","loc":"B48","notice":"Spot Light Not Working","status":"STILL","note":"Spr"},{"no":140,"dept":"PLUMB","loc":"F220","notice":"Siphon Need Button","status":"OK","note":""},{"no":141,"dept":"ELECT","loc":"FRONTB31","notice":"Lamp Flashing","status":"OK","note":""},{"no":142,"dept":"ELECT","loc":"FRONTB182C","notice":"Lamp Flashing","status":"OK","note":""},{"no":143,"dept":"ELECT","loc":"FRONT121","notice":"Lamp Flashing","status":"OK","note":""},{"no":144,"dept":"CIVIL","loc":"BESIDELIFT152TF","notice":"Door Need Paint","status":"STILL","note":"Spr"},{"no":145,"dept":"ELECT","loc":"G309","notice":"Spotlight Paint","status":"OK","note":""},{"no":146,"dept":"ELECT","loc":"G323","notice":"Siphon Button Need Repair","status":"STILL","note":"Spr"},{"no":147,"dept":"PLUMB","loc":"F63","notice":"Bad Smell","status":"OK","note":""},{"no":148,"dept":"PLUMB","loc":"S243","notice":"Basin Block","status":"OK","note":""},{"no":149,"dept":"PLUMB","loc":"F172","notice":"Flash Tank Leaking","status":"OK","note":""},{"no":150,"dept":"CIVIL","loc":"B168","notice":"Door Need Paint","status":"STILL","note":"Spr"},{"no":151,"dept":"ELECT","loc":"G309","notice":"Spot Light Not Working","status":"OK","note":""},{"no":152,"dept":"PLUMB","loc":"G323","notice":"Flash Tank Leaking","status":"OK","note":""}]
+;
+const NOTICE_AR = {"Ac Cold":"تكييف بارد","Ac Hot":"تكييف حار","Bad Smell":"رائحة كريهة","Basin Block":"انسداد المغسلة","Basin Blocked":"انسداد المغسلة","Basin Stopper Need Repair":"صمام المغسلة يحتاج إصلاح","Bathroom Blocked":"انسداد دورة المياه","Bathroom Cover Set Broken":"غطاء طقم دورة المياه مكسور","Beehive Need Remove":"خلية نحل تحتاج إزالة","Broken Bidet Hand Spray":"رشاش الشطاف مكسور","Ceiling Lift Need Repair":"سقف المصعد يحتاج إصلاح","Ceiling Need Repair":"السقف يحتاج إصلاح","Cold":"برودة","Door Lift Need Check":"باب المصعد يحتاج فحص","Door Need Paint":"الباب يحتاج دهان","Door Need Repair":"الباب يحتاج إصلاح","Door Stopped Need Repair":"الباب متوقف ويحتاج إصلاح","Door Stopper Need Install":"يحتاج تركيب مثبت باب","Door Stopper Need Repair":"مثبت الباب يحتاج إصلاح","Faucet Need Repair":"الحنفية تحتاج إصلاح","Flash Tank Leaking":"تسريب من خزان الطرد","Flash Tank Not Working":"خزان الطرد لا يعمل","Frame Broken":"الإطار مكسور","Hand Spray Leaking":"تسريب من رشاش اليد","Hand Spray Need Repair":"رشاش اليد يحتاج إصلاح","Hand Spray Rusty":"رشاش اليد صدئ","Lamp Flasher":"وميض المصباح","Lamp Flashing":"وميض المصباح","Leak From Flash Tank":"تسريب من خزان الطرد","Leak From Hand Spray":"تسريب من رشاش اليد","Leak From Soap Box":"تسريب من علبة الصابون","Leaking From Soap Box":"تسريب من علبة الصابون","Lift 153 Not Working":"المصعد 153 لا يعمل","Lift Not Working":"المصعد لا يعمل","Light Flashing":"وميض الإضاءة","Light Not Working":"الإضاءة لا تعمل","Lights Not Working":"الإضاءة لا تعمل","Marble Broken":"الرخام مكسور","Siphon Button Need Repair":"زر السيفون يحتاج إصلاح","Siphon Need Button":"السيفون يحتاج زر","Soap Box Leaking":"تسريب من علبة الصابون","Soap Box Missing":"علبة الصابون مفقودة","Soap Box Need Repair":"علبة الصابون تحتاج إصلاح","Socket Need Close":"المقبس يحتاج إغلاق","Socket Need Install":"يحتاج تركيب مقبس","Socket Need Repair":"المقبس يحتاج إصلاح","Sopt Light Not Working":"كشاف الإضاءة لا يعمل","Spot Light Not Working":"كشاف الإضاءة لا يعمل","Spotlight Paint":"دهان الكشاف","Stair Light Not Working":"إضاءة الدرج لا تعمل","Stopped":"متوقف","Table Chair Broken":"الطاولة/الكرسي مكسور","Thermostat Cover Missing":"غطاء الثرموستات مفقود","Tissue Box Need Repair":"علبة المناديل تحتاج إصلاح","Tissue Holder Broken":"حامل المناديل مكسور","Tissue Holder Broken Need Repair":"حامل المناديل مكسور ويحتاج إصلاح","Tissue Holder Need Repair":"حامل المناديل يحتاج إصلاح","Toilet Set Cover Need Repair":"غطاء طقم المرحاض يحتاج إصلاح","Wall Cracked":"جدار متصدع","Water Leakage From Rear Toilet":"تسريب مياه من خلف المرحاض"};
+</script>
+<script>
+/* ================= SEED DATA ================= */
+const SEED_TICKETS = window.__BUILDINGS_SEED__;
+
+let USERS = [
+  {username:'admin', password:'admin123', role:'admin'}
+];
+
+let BUILDINGS = [
+  {
+    id:'b1',
+    name:'Building 326 — King Abdullah Girls College (Imam Project)',
+    siteManager:'Ahmed Adel',
+    buildingEngineer:'Ghaida Algadi',
+    period:'June 2026',
+    nextNo: SEED_TICKETS.length + 1,
+    tickets: SEED_TICKETS.map(d=>({id:'t'+d.no, no:d.no, dept:d.dept, loc:d.loc, notice:d.notice, status:d.status, note:d.note}))
+  }
+];
+
+let currentUser = null;
+let currentBuildingId = 'b1';
+let LANG = 'en';
+let activeFilter = 'ALL';
+let searchTerm = '';
+let stats = {};
+let DEPT_META = {};
+let DEPT_ORDER = [];
+let editingTicketId = null;
+let editingBuildingId = null;
+
+/* ================= DEPT HANDLING ================= */
+const KNOWN_DEPTS = {
+  CIVIL:{en:'Civil', ar:'مدني', color:'#c7d0e0', badge:'b-civil'},
+  PLUMB:{en:'Plumbing', ar:'سباكة', color:'#3d8bf2', badge:'b-plumb'},
+  ELECT:{en:'Electrical', ar:'كهرباء', color:'#f5a623', badge:'b-elect'},
+  HVAC:{en:'HVAC', ar:'تكييف', color:'#f4586e', badge:'b-hvac'},
+  LIFT:{en:'Lifts', ar:'مصاعد', color:'#a78bfa', badge:'b-lift'}
+};
+const EXTRA_PALETTE = ['#34d3b5','#f472b6','#84cc16','#38bdf8','#e879f9','#facc15'];
+const DEPT_SYNONYMS = {
+  CIVIL:'CIVIL', ARCHITECTURAL:'CIVIL', ARCH:'CIVIL',
+  PLUMB:'PLUMB', PLUMBING:'PLUMB',
+  ELECT:'ELECT', ELECTRICAL:'ELECT', ELEC:'ELECT',
+  HVAC:'HVAC', AC:'HVAC', MECH:'HVAC', MECHANICAL:'HVAC',
+  LIFT:'LIFT', LIFTS:'LIFT', ELEVATOR:'LIFT', ELEVATORS:'LIFT'
+};
+function normalizeDeptCode(raw){
+  if(!raw) return 'OTHER';
+  const up = String(raw).trim().toUpperCase().replace(/[^A-Z]/g,'');
+  return DEPT_SYNONYMS[up] || (up || 'OTHER');
+}
+function titleCase(s){ return String(s).toLowerCase().replace(/\b\w/g, c=>c.toUpperCase()); }
+
+function getBuilding(id){ return BUILDINGS.find(b=>b.id===id); }
+function getCurrentBuilding(){ return getBuilding(currentBuildingId); }
+
+function buildDeptMeta(){
+  const tickets = getCurrentBuilding().tickets;
+  const codes = Array.from(new Set(tickets.map(d=>d.dept)));
+  const counts = {};
+  codes.forEach(c=>counts[c]=tickets.filter(d=>d.dept===c).length);
+  codes.sort((a,b)=>counts[b]-counts[a]);
+  DEPT_META = {};
+  let extraIdx = 0;
+  codes.forEach(code=>{
+    if(KNOWN_DEPTS[code]){ DEPT_META[code] = KNOWN_DEPTS[code]; }
+    else{
+      const color = EXTRA_PALETTE[extraIdx % EXTRA_PALETTE.length]; extraIdx++;
+      DEPT_META[code] = {en:titleCase(code), ar:titleCase(code), color:color, badge:'b-civil'};
+    }
+  });
+  DEPT_ORDER = codes;
+}
+
+/* ================= TRANSLATIONS ================= */
+const STR = {
+  en:{
+    loginTitle:'Sign in', loginSub:'AMOS Maintenance Management System',
+    username:'Username', password:'Password', loginBtn:'Sign In',
+    loginError:'Invalid username or password.',
+    companyName:'Arabian Maintenance Operation Service',
+    appSubtitle:'Multi-Building Maintenance Management System',
+    exportCsv:'Export CSV', importData:'Import Excel / PDF', saveBackup:'Save Backup', loadBackup:'Load Backup',
+    manageUsers:'Manage Users', manageUsersSub:'Add or remove users who can access this system.',
+    logout:'Log Out',
+    addBuilding:'+ Add Building', editBuilding:'Edit Building', deleteBuilding:'Delete Building',
+    buildingModalSub:'Set the building name and its assigned engineers.',
+    fieldBuildingName:'Building Name / Project', siteManager:'Site Manager Engineer', buildingEngineer:'Building Engineer',
+    reportPeriod:'Report Period',
+    chartsSectionTitle:'Department Performance & Fault Distribution',
+    ordersByDept:'Job Orders by Department', ordersByDeptSub:'Completed vs. still-pending tickets',
+    legendCompleted:'Completed (OK)', legendPending:'Still Pending',
+    faultsDistribution:'Engineering Faults Distribution', faultsDistributionSub:'Share of total tickets by trade',
+    summarySectionTitle:'Executive Summary & Recommendations',
+    execSummaryTitle:'Executive Summary', countermeasuresTitle:'Proposed Engineering Countermeasures',
+    ledgerSectionTitle:'Full Maintenance Ledger',
+    searchPlaceholder:'Search by location, issue, department…',
+    colNo:'No.', colDept:'Dept', colLocation:'Location', colIssue:'Issue Description', colStatus:'Status',
+    resultCount:(n,tt)=>`Showing ${n} of ${tt} tickets`,
+    filterAll:'All', filterMaint:'Under Maintenance', filterSpr:'Awaiting Parts',
+    statusCompleted:'Completed', statusVerify:'Needs Verification', statusSpr:'Awaiting Parts', statusMaint:'Under Maintenance',
+    kpiTotal:'Total Requests', kpiTotalSub:'tickets logged for this building',
+    kpiOk:'Fully Completed (OK)', kpiOkSub:'Closed & tested',
+    kpiMaint:'Under Maintenance', kpiMaintSub:'Active works in progress',
+    kpiSpr:'Awaiting Spare Parts', kpiSprSub:'SPR — parts on order',
+    kpiPending:'Needs Verification', kpiPendingSub:'Logged without a closing order',
+    footer:'Arabian Maintenance Operation Service Co. Ltd — Multi-Building Maintenance Management System',
+    noResults:'No matching tickets found.', csvCols:['No','Department','Location','Issue Description','Status'],
+    importing:'Reading file…',
+    importOkExcel:(n,f)=>`Imported ${n} tickets from "${f}" into the current building.`,
+    importOkPdf:(n,f)=>`Imported ${n} tickets from "${f}" (PDF, best-effort extraction). Please verify rows below.`,
+    importErr:(f)=>`Couldn't read "${f}". Please check the file follows the standard ledger columns.`,
+    importEmpty:(f)=>`No recognizable ticket rows found in "${f}".`,
+    dismiss:'Dismiss',
+    addTicket:'Add Ticket', editTicket:'Edit Ticket', ticketModalSub:'Enter the fault details for this job order.',
+    fieldDept:'Department', fieldLocation:'Location', fieldNotice:'Issue Description', fieldStatus:'Status',
+    save:'Save', cancel:'Cancel', close:'Close',
+    confirmDeleteTicket:'Delete this ticket? This cannot be undone.',
+    confirmDeleteBuilding:'Delete this building and all its tickets? This cannot be undone.',
+    cannotDeleteLastBuilding:'You must keep at least one building.',
+    addUser:'Add User', newUsername:'New Username', newPassword:'New Password',
+    userExists:'That username already exists.', fillBothFields:'Please fill in both fields.',
+    confirmDeleteUser:'Remove this user?', cannotDeleteLastUser:'You must keep at least one user.',
+    savedBackup:'Backup file downloaded.', loadedBackup:'Backup loaded successfully.', backupError:'Could not read that backup file.',
+    selectBuildingFirst:'Please select or create a building first.',
+    fillTicketFields:'Please fill in department, location and issue description.',
+  },
+  ar:{
+    loginTitle:'تسجيل الدخول', loginSub:'نظام إدارة صيانة AMOS',
+    username:'اسم المستخدم', password:'كلمة المرور', loginBtn:'دخول',
+    loginError:'اسم المستخدم أو كلمة المرور غير صحيحة.',
+    companyName:'الشركة العربية لخدمات تشغيل وصيانة المرافق',
+    appSubtitle:'نظام إدارة صيانة متعدد المباني',
+    exportCsv:'تصدير CSV', importData:'استيراد إكسل / PDF', saveBackup:'حفظ نسخة احتياطية', loadBackup:'استعادة نسخة احتياطية',
+    manageUsers:'إدارة المستخدمين', manageUsersSub:'إضافة أو إزالة المستخدمين الذين يمكنهم الدخول لهذا النظام.',
+    logout:'تسجيل الخروج',
+    addBuilding:'+ إضافة مبنى', editBuilding:'تعديل المبنى', deleteBuilding:'حذف المبنى',
+    buildingModalSub:'حدد اسم المبنى والمهندسين المسؤولين عنه.',
+    fieldBuildingName:'اسم المبنى / المشروع', siteManager:'مهندس مدير الموقع', buildingEngineer:'مهندسة/مهندس المبنى',
+    reportPeriod:'فترة التقرير',
+    chartsSectionTitle:'أداء الأقسام وتوزيع الأعطال',
+    ordersByDept:'أوامر العمل حسب القسم', ordersByDeptSub:'البلاغات المكتملة مقابل المتبقية',
+    legendCompleted:'مكتمل (OK)', legendPending:'لا يزال معلقًا',
+    faultsDistribution:'توزيع الأعطال الهندسية', faultsDistributionSub:'نسبة إجمالي البلاغات حسب التخصص',
+    summarySectionTitle:'الملخص التنفيذي والتوصيات',
+    execSummaryTitle:'الملخص التنفيذي', countermeasuresTitle:'الإجراءات الهندسية المقترحة',
+    ledgerSectionTitle:'سجل الصيانة الكامل',
+    searchPlaceholder:'ابحث حسب الموقع أو العطل أو القسم…',
+    colNo:'الرقم', colDept:'القسم', colLocation:'الموقع', colIssue:'وصف العطل', colStatus:'الحالة',
+    resultCount:(n,tt)=>`عرض ${n} من ${tt} بلاغ`,
+    filterAll:'الكل', filterMaint:'تحت الصيانة', filterSpr:'بانتظار قطع الغيار',
+    statusCompleted:'مكتمل', statusVerify:'يحتاج تأكيد', statusSpr:'بانتظار قطع الغيار', statusMaint:'تحت الصيانة',
+    kpiTotal:'إجمالي البلاغات', kpiTotalSub:'بلاغًا مسجلاً لهذا المبنى',
+    kpiOk:'مكتمل بالكامل (OK)', kpiOkSub:'تم الإغلاق والاختبار',
+    kpiMaint:'تحت الصيانة', kpiMaintSub:'أعمال جارية حاليًا',
+    kpiSpr:'بانتظار قطع الغيار', kpiSprSub:'SPR — قطع الغيار قيد الطلب',
+    kpiPending:'يحتاج تأكيد', kpiPendingSub:'مسجل بدون أمر إغلاق',
+    footer:'الشركة العربية لخدمات تشغيل وصيانة المرافق المحدودة — نظام إدارة صيانة متعدد المباني',
+    noResults:'لا توجد بلاغات مطابقة.', csvCols:['الرقم','القسم','الموقع','وصف العطل','الحالة'],
+    importing:'جارٍ قراءة الملف…',
+    importOkExcel:(n,f)=>`تم استيراد ${n} بلاغًا من "${f}" إلى المبنى الحالي.`,
+    importOkPdf:(n,f)=>`تم استيراد ${n} بلاغًا من "${f}" (PDF، استخراج بأفضل جهد). يرجى مراجعة الصفوف أدناه.`,
+    importErr:(f)=>`تعذّرت قراءة "${f}". يرجى التأكد من اتباع أعمدة السجل القياسية.`,
+    importEmpty:(f)=>`لم يتم العثور على صفوف بلاغات في "${f}".`,
+    dismiss:'إغلاق',
+    addTicket:'إضافة بلاغ', editTicket:'تعديل البلاغ', ticketModalSub:'أدخل تفاصيل العطل لأمر العمل هذا.',
+    fieldDept:'القسم', fieldLocation:'الموقع', fieldNotice:'وصف العطل', fieldStatus:'الحالة',
+    save:'حفظ', cancel:'إلغاء', close:'إغلاق',
+    confirmDeleteTicket:'حذف هذا البلاغ؟ لا يمكن التراجع عن هذا الإجراء.',
+    confirmDeleteBuilding:'حذف هذا المبنى وجميع بلاغاته؟ لا يمكن التراجع عن هذا الإجراء.',
+    cannotDeleteLastBuilding:'يجب الاحتفاظ بمبنى واحد على الأقل.',
+    addUser:'إضافة مستخدم', newUsername:'اسم مستخدم جديد', newPassword:'كلمة مرور جديدة',
+    userExists:'اسم المستخدم هذا موجود بالفعل.', fillBothFields:'يرجى تعبئة الحقلين.',
+    confirmDeleteUser:'إزالة هذا المستخدم؟', cannotDeleteLastUser:'يجب الاحتفاظ بمستخدم واحد على الأقل.',
+    savedBackup:'تم تحميل ملف النسخة الاحتياطية.', loadedBackup:'تم استعادة النسخة الاحتياطية بنجاح.', backupError:'تعذّرت قراءة ملف النسخة الاحتياطية.',
+    selectBuildingFirst:'يرجى اختيار أو إنشاء مبنى أولاً.',
+    fillTicketFields:'يرجى تعبئة القسم والموقع ووصف العطل.',
+  }
+};
+function t(key){ return STR[LANG][key]; }
+function noticeText(d){ return LANG==='ar' ? (NOTICE_AR[d.notice] || d.notice) : d.notice; }
+function deptLabel(code){ const m = DEPT_META[code]; if(!m) return code; return LANG==='ar' ? m.ar : m.en; }
+
+/* ================= AUTH ================= */
+function doLogin(){
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const found = USERS.find(x=>x.username===u && x.password===p);
+  const err = document.getElementById('loginError');
+  if(!found){
+    err.textContent = t('loginError');
+    err.classList.add('show');
+    return;
+  }
+  err.classList.remove('show');
+  currentUser = found;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('userAvatar').textContent = currentUser.username.slice(0,2).toUpperCase();
+  document.getElementById('userNameLabel').textContent = currentUser.username;
+  renderBuildingSelect();
+  renderAll();
+}
+function doLogout(){
+  currentUser = null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+}
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){
+    if(!document.getElementById('loginScreen').classList.contains('hidden')){ doLogin(); }
+  }
+});
+
+/* ================= USERS MODAL ================= */
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+function openUsersModal(){
+  renderUsersList();
+  openModal('usersModalOverlay');
+}
+function renderUsersList(){
+  document.getElementById('usersList').innerHTML = USERS.map((u,i)=>`
+    <div class="user-row">
+      <div><div class="uname">${u.username}</div><div class="urole">${u.role==='admin'?'admin':'user'}</div></div>
+      <button class="icon-btn del" onclick="removeUser(${i})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>
+    </div>
+  `).join('');
+}
+function addUser(){
+  const u = document.getElementById('fNewUsername').value.trim();
+  const p = document.getElementById('fNewPassword').value;
+  if(!u || !p){ alert(t('fillBothFields')); return; }
+  if(USERS.some(x=>x.username===u)){ alert(t('userExists')); return; }
+  USERS.push({username:u, password:p, role:'user'});
+  document.getElementById('fNewUsername').value='';
+  document.getElementById('fNewPassword').value='';
+  renderUsersList();
+}
+function removeUser(idx){
+  if(USERS.length<=1){ alert(t('cannotDeleteLastUser')); return; }
+  if(!confirm(t('confirmDeleteUser'))) return;
+  USERS.splice(idx,1);
+  renderUsersList();
+}
+
+/* ================= BUILDINGS ================= */
+function renderBuildingSelect(){
+  const sel = document.getElementById('buildingSelect');
+  sel.innerHTML = BUILDINGS.map(b=>`<option value="${b.id}" ${b.id===currentBuildingId?'selected':''}>${b.name}</option>`).join('');
+  const b = getCurrentBuilding();
+  document.getElementById('buildingMetaBar').innerHTML = `
+    <div><span data-t="siteManager"></span>: <b>${b.siteManager}</b></div>
+    <div><span data-t="buildingEngineer"></span>: <b>${b.buildingEngineer}</b></div>
+    <div><span data-t="reportPeriod"></span>: <b>${b.period}</b></div>
+  `;
+  document.querySelectorAll('#buildingMetaBar [data-t]').forEach(el=>{
+    el.textContent = STR[LANG][el.getAttribute('data-t')];
+  });
+}
+function switchBuilding(id){
+  currentBuildingId = id;
+  activeFilter='ALL'; searchTerm='';
+  document.getElementById('searchInput').value='';
+  renderBuildingSelect();
+  renderAll();
+}
+function openBuildingModal(id){
+  editingBuildingId = id;
+  const title = document.getElementById('buildingModalTitle');
+  title.textContent = id ? t('editBuilding') : t('addBuilding');
+  if(id){
+    const b = getBuilding(id);
+    document.getElementById('fBuildingName').value = b.name;
+    document.getElementById('fSiteManager').value = b.siteManager;
+    document.getElementById('fBuildingEngineer').value = b.buildingEngineer;
+    document.getElementById('fPeriod').value = b.period;
+  } else {
+    document.getElementById('fBuildingName').value='';
+    document.getElementById('fSiteManager').value='';
+    document.getElementById('fBuildingEngineer').value='';
+    document.getElementById('fPeriod').value='';
+  }
+  openModal('buildingModalOverlay');
+}
+function saveBuildingFromModal(){
+  const name = document.getElementById('fBuildingName').value.trim();
+  const sm = document.getElementById('fSiteManager').value.trim();
+  const be = document.getElementById('fBuildingEngineer').value.trim();
+  const period = document.getElementById('fPeriod').value.trim();
+  if(!name){ alert(t('fieldBuildingName')); return; }
+  if(editingBuildingId){
+    const b = getBuilding(editingBuildingId);
+    b.name=name; b.siteManager=sm; b.buildingEngineer=be; b.period=period;
+  } else {
+    const id = 'b'+Date.now();
+    BUILDINGS.push({id, name, siteManager:sm, buildingEngineer:be, period, nextNo:1, tickets:[]});
+    currentBuildingId = id;
+  }
+  closeModal('buildingModalOverlay');
+  renderBuildingSelect();
+  renderAll();
+}
+function deleteBuilding(){
+  if(BUILDINGS.length<=1){ alert(t('cannotDeleteLastBuilding')); return; }
+  if(!confirm(t('confirmDeleteBuilding'))) return;
+  BUILDINGS = BUILDINGS.filter(b=>b.id!==currentBuildingId);
+  currentBuildingId = BUILDINGS[0].id;
+  renderBuildingSelect();
+  renderAll();
+}
+
+/* ================= TICKET STATUS HELPERS ================= */
+function statusFormToData(formVal){
+  if(formVal==='OK') return {status:'OK', note:''};
+  if(formVal==='MAINT') return {status:'STILL', note:'Under Maintenance'};
+  if(formVal==='SPR') return {status:'STILL', note:'Spr'};
+  return {status:'PENDING', note:''};
+}
+function dataToStatusForm(d){
+  if(d.status==='OK') return 'OK';
+  if(d.status==='PENDING') return 'PENDING';
+  return d.note==='Spr' ? 'SPR' : 'MAINT';
+}
+
+/* ================= TICKET CRUD ================= */
+function openTicketModal(id){
+  editingTicketId = id;
+  const title = document.getElementById('ticketModalTitle');
+  title.textContent = id ? t('editTicket') : t('addTicket');
+  document.getElementById('deptSuggestions').innerHTML = Object.keys(KNOWN_DEPTS).map(k=>`<option value="${k}">`).join('');
+  if(id){
+    const b = getCurrentBuilding();
+    const d = b.tickets.find(x=>x.id===id);
+    document.getElementById('fTicketDept').value = d.dept;
+    document.getElementById('fTicketLoc').value = d.loc;
+    document.getElementById('fTicketNotice').value = d.notice;
+    document.getElementById('fTicketStatus').value = dataToStatusForm(d);
+  } else {
+    document.getElementById('fTicketDept').value='';
+    document.getElementById('fTicketLoc').value='';
+    document.getElementById('fTicketNotice').value='';
+    document.getElementById('fTicketStatus').value='OK';
+  }
+  openModal('ticketModalOverlay');
+}
+function saveTicketFromModal(){
+  const b = getCurrentBuilding();
+  if(!b){ alert(t('selectBuildingFirst')); return; }
+  const deptRaw = document.getElementById('fTicketDept').value.trim();
+  const loc = document.getElementById('fTicketLoc').value.trim();
+  const notice = document.getElementById('fTicketNotice').value.trim();
+  const statusForm = document.getElementById('fTicketStatus').value;
+  if(!deptRaw || !loc || !notice){ alert(t('fillTicketFields')); return; }
+  const dept = normalizeDeptCode(deptRaw);
+  const {status, note} = statusFormToData(statusForm);
+  if(editingTicketId){
+    const d = b.tickets.find(x=>x.id===editingTicketId);
+    d.dept=dept; d.loc=loc; d.notice=titleCase(notice); d.status=status; d.note=note;
+  } else {
+    b.tickets.push({id:'t'+Date.now(), no:b.nextNo++, dept, loc, notice:titleCase(notice), status, note});
+  }
+  closeModal('ticketModalOverlay');
+  renderAll();
+}
+function deleteTicket(id){
+  if(!confirm(t('confirmDeleteTicket'))) return;
+  const b = getCurrentBuilding();
+  b.tickets = b.tickets.filter(x=>x.id!==id);
+  renderAll();
+}
+
+/* ================= STATS & RENDER ================= */
+function computeStats(){
+  buildDeptMeta();
+  const tickets = getCurrentBuilding().tickets;
+  stats.total = tickets.length;
+  stats.okCount = tickets.filter(d=>d.status==='OK').length;
+  stats.maintCount = tickets.filter(d=>d.status==='STILL' && d.note==='Under Maintenance').length;
+  stats.sprCount = tickets.filter(d=>d.status==='STILL' && d.note==='Spr').length;
+  stats.pendingCount = tickets.filter(d=>d.status==='PENDING').length;
+  stats.dept = {};
+  DEPT_ORDER.forEach(d=>stats.dept[d]={ok:0,still:0,total:0});
+  tickets.forEach(d=>{
+    if(!stats.dept[d.dept]) return;
+    stats.dept[d.dept].total++;
+    if(d.status==='OK') stats.dept[d.dept].ok++; else stats.dept[d.dept].still++;
+  });
+}
+
+function renderStaticText(){
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const key = el.getAttribute('data-t');
+    if(STR[LANG][key] !== undefined) el.textContent = STR[LANG][key];
+  });
+  const si = document.getElementById('searchInput'); if(si) si.placeholder = t('searchPlaceholder');
+  const ft = document.getElementById('footerText'); if(ft) ft.textContent = t('footer');
+}
+
+function renderKpis(){
+  const kpis = [
+    {label:t('kpiTotal'), value:stats.total, sub:t('kpiTotalSub'), color:'var(--accent)'},
+    {label:t('kpiOk'), value:stats.okCount, pct: stats.total? (stats.okCount/stats.total*100).toFixed(1)+'%':'0%', sub:t('kpiOkSub'), color:'var(--green)'},
+    {label:t('kpiMaint'), value:stats.maintCount, pct: stats.total? (stats.maintCount/stats.total*100).toFixed(1)+'%':'0%', sub:t('kpiMaintSub'), color:'var(--amber)'},
+    {label:t('kpiSpr'), value:stats.sprCount, pct: stats.total? (stats.sprCount/stats.total*100).toFixed(1)+'%':'0%', sub:t('kpiSprSub'), color:'var(--red)'},
+    {label:t('kpiPending'), value:stats.pendingCount, pct: stats.total? (stats.pendingCount/stats.total*100).toFixed(1)+'%':'0%', sub:t('kpiPendingSub'), color:'var(--purple)'}
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k=>`
+    <div class="kpi" style="--kc:${k.color}">
+      <div class="klabel">${k.label}</div>
+      <div class="kval">${k.value}${k.pct?`<small>${k.pct}</small>`:''}</div>
+      <div class="ksub"><span class="dot"></span>${k.sub}</div>
+    </div>`).join('');
+}
+
+function renderBarList(){
+  const maxTotal = Math.max(1, ...DEPT_ORDER.map(d=>stats.dept[d].total));
+  const ticketsLabel = LANG==='ar' ? 'بلاغ' : 'tickets';
+  document.getElementById('barList').innerHTML = DEPT_ORDER.map(d=>{
+    const s = stats.dept[d];
+    const okPct = s.total? (s.ok/maxTotal*100):0;
+    const stillPct = s.total? (s.still/maxTotal*100):0;
+    return `<div class="brow">
+      <div class="blabel">${deptLabel(d)}</div>
+      <div class="btrack"><div class="bfill-ok" style="width:${okPct}%"></div><div class="bfill-still" style="width:${stillPct}%"></div></div>
+      <div class="bnum"><b>${s.total}</b> ${ticketsLabel}</div>
+    </div>`;
+  }).join('') || `<div style="color:var(--text-faint);font-size:12.5px;">—</div>`;
+}
+
+function renderDonut(){
+  const totalD = DEPT_ORDER.reduce((a,d)=>a+stats.dept[d].total,0) || 1;
+  const cx=90, cy=90, r=68, sw=26;
+  let angle = -90;
+  const circ = 2*Math.PI*r;
+  let svg = '';
+  DEPT_ORDER.forEach(d=>{
+    const val = stats.dept[d].total;
+    const frac = val/totalD;
+    const dash = frac*circ;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${DEPT_META[d].color}" stroke-width="${sw}"
+      stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-((angle+90)/360*circ)}"
+      transform="rotate(-90 ${cx} ${cy})" stroke-linecap="butt"/>`;
+    angle += frac*360;
+  });
+  const ticketsLabel = LANG==='ar' ? 'بلاغ' : 'tickets';
+  svg += `<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="#fff" font-size="24" font-weight="800" font-family="Segoe UI">${DEPT_ORDER.length?totalD:0}</text>`;
+  svg += `<text x="${cx}" y="${cy+16}" text-anchor="middle" fill="#8fa0bd" font-size="10.5" font-family="Segoe UI">${ticketsLabel}</text>`;
+  document.getElementById('donutSvg').innerHTML = svg;
+  document.getElementById('donutLegend').innerHTML = DEPT_ORDER.map(d=>{
+    const val = stats.dept[d].total;
+    const pct = (val/totalD*100).toFixed(1);
+    return `<div class="dl-row">
+      <div class="dl-left"><span class="dl-sw" style="background:${DEPT_META[d].color}"></span>${deptLabel(d)}</div>
+      <div class="dl-right">${val} <span style="color:var(--text-faint);font-weight:600;">(${pct}%)</span></div>
+    </div>`;
+  }).join('') || `<div style="color:var(--text-faint);font-size:12.5px;">—</div>`;
+}
+
+const CATS = [
+  {key:'lighting', test:/lamp|light|spot/i, en:'Lighting / lamp faults', ar:'أعطال الإضاءة / وميض المصابيح'},
+  {key:'basin', test:/basin/i, en:'Basin blockages', ar:'انسداد المغاسل'},
+  {key:'handspray', test:/hand spray|siphon|bidet/i, en:'Hand-spray / bidet fittings', ar:'تركيبات رشاش اليد / الشطاف'},
+  {key:'flashtank', test:/flash tank/i, en:'Flush-tank faults', ar:'أعطال خزان الطرد'},
+  {key:'bathroom', test:/bathroom.*block/i, en:'Bathroom blockages', ar:'انسداد دورات المياه'},
+  {key:'soapbox', test:/soap box/i, en:'Soap-box leaks', ar:'تسريبات علبة الصابون'},
+  {key:'tissue', test:/tissue/i, en:'Tissue-holder repairs', ar:'إصلاحات حامل المناديل'},
+  {key:'door', test:/door/i, en:'Door repairs', ar:'إصلاحات الأبواب'},
+  {key:'marble', test:/marble/i, en:'Marble repairs', ar:'إصلاحات الرخام'},
+  {key:'hvac', test:/\bac\b|cold|hot/i, en:'HVAC (AC hot/cold)', ar:'أعطال التكييف (حار/بارد)'},
+  {key:'socket', test:/socket/i, en:'Socket faults', ar:'أعطال المقابس'},
+  {key:'wall', test:/wall/i, en:'Wall cracks', ar:'تصدعات الجدران'}
+];
+function classify(notice){
+  for(const c of CATS){ if(c.test.test(notice)) return c; }
+  return {key:'other', en:'Other', ar:'أخرى'};
+}
+
+function renderSummary(){
+  const s = stats;
+  const tickets = getCurrentBuilding().tickets;
+  const okPct = s.total? (s.okCount/s.total*100).toFixed(1):'0.0';
+  const topDepts = DEPT_ORDER.slice(0,3);
+  const catCounts = {};
+  tickets.forEach(d=>{ const c = classify(d.notice); catCounts[c.key] = (catCounts[c.key]||0)+1; });
+  const catList = Object.keys(catCounts).map(k=>({key:k, count:catCounts[k], meta:(CATS.find(c=>c.key===k)||{en:'Other',ar:'أخرى'})}))
+    .sort((a,b)=>b.count-a.count);
+  const top5 = catList.slice(0,5);
+
+  if(s.total===0){
+    document.getElementById('execSummaryBody').innerHTML = `<p>${LANG==='ar' ? 'لا توجد بلاغات مسجلة لهذا المبنى بعد.' : 'No tickets logged for this building yet.'}</p>`;
+    document.getElementById('countermeasuresBody').innerHTML = '';
+    return;
+  }
+
+  if(LANG==='en'){
+    let p1 = `<p>This report covers <b>${s.total} maintenance tickets</b> logged for <b>${getCurrentBuilding().name}</b>, of which <b>${s.okCount} (${okPct}%)</b> were closed and tested successfully.</p>`;
+    let deptSentences = topDepts.map(d=>{
+      const st = s.dept[d]; const pct = s.total? (st.total/s.total*100).toFixed(1):'0.0';
+      return `${deptLabel(d)} <b>${st.total} (${pct}%)</b>`;
+    }).join(', ');
+    let p2 = topDepts.length ? `<p>By trade: ${deptSentences}.</p>` : '';
+    let p3 = `<p>Currently, <b>${s.maintCount} tickets</b> remain under active maintenance and <b>${s.sprCount} tickets</b> are held awaiting spare-parts dispatch (SPR)${s.pendingCount?`, with a further <b>${s.pendingCount} ticket(s)</b> needing verification`:''}.</p>`;
+    document.getElementById('execSummaryBody').innerHTML = p1 + p2 + p3;
+    document.getElementById('countermeasuresBody').innerHTML = top5.map(c=>{
+      const pct = s.total? (c.count/s.total*100).toFixed(1):'0.0';
+      return `<li><b>${c.meta.en} (${c.count} tickets, ${pct}%):</b> one of the most frequent fault categories — recommend a targeted root-cause inspection and a stocked-parts plan for this fixture type.</li>`;
+    }).join('') + (s.sprCount ? `<li><b>Awaiting Spare Parts (${s.sprCount} tickets):</b> recommend pre-stocking the most common failing components to shorten lead time.</li>` : '')
+      + (s.pendingCount ? `<li><b>Unverified tickets (${s.pendingCount}):</b> recommend the relevant subcontractor confirm resolution before next cycle.</li>` : '');
+  } else {
+    let p1 = `<p>يغطي هذا التقرير <b>${s.total} بلاغ صيانة</b> مسجلة لمبنى <b>${getCurrentBuilding().name}</b>، تم إغلاق واختبار <b>${s.okCount} (${okPct}%)</b> منها بنجاح.</p>`;
+    let deptSentences = topDepts.map(d=>{
+      const st = s.dept[d]; const pct = s.total? (st.total/s.total*100).toFixed(1):'0.0';
+      return `${deptLabel(d)} <b>${st.total} (${pct}%)</b>`;
+    }).join('، ');
+    let p2 = topDepts.length ? `<p>حسب التخصص: ${deptSentences}.</p>` : '';
+    let p3 = `<p>حاليًا، ما زال <b>${s.maintCount} بلاغًا</b> تحت أعمال صيانة نشطة، وينتظر <b>${s.sprCount} بلاغًا</b> توريد قطع غيار (SPR)${s.pendingCount?`، مع <b>${s.pendingCount} بلاغ إضافي</b> يحتاج تأكيدًا`:''}.</p>`;
+    document.getElementById('execSummaryBody').innerHTML = p1 + p2 + p3;
+    document.getElementById('countermeasuresBody').innerHTML = top5.map(c=>{
+      const pct = s.total? (c.count/s.total*100).toFixed(1):'0.0';
+      return `<li><b>${c.meta.ar} (${c.count} بلاغًا، ${pct}%):</b> من أكثر فئات الأعطال تكرارًا — يوصى بفحص جذري مستهدف وخطة تخزين قطع غيار لهذا النوع من التركيبات.</li>`;
+    }).join('') + (s.sprCount ? `<li><b>بانتظار قطع الغيار (${s.sprCount} بلاغًا):</b> يوصى بالتخزين المسبق للمكونات الأكثر عطلاً لتقليل مدة الانتظار.</li>` : '')
+      + (s.pendingCount ? `<li><b>بلاغات غير مؤكدة (${s.pendingCount}):</b> يوصى بأن يؤكد المقاول المعني حل المشكلة قبل الدورة القادمة.</li>` : '');
+  }
+}
+
+function filterDefs(){
+  const defs = [{key:'ALL', label:t('filterAll'), count:stats.total}];
+  DEPT_ORDER.forEach(d=>{ defs.push({key:d, label:deptLabel(d), count:stats.dept[d].total}); });
+  defs.push({key:'STILL_MAINT', label:t('filterMaint'), count:stats.maintCount});
+  defs.push({key:'STILL_SPR', label:t('filterSpr'), count:stats.sprCount});
+  return defs;
+}
+function renderChips(){
+  document.getElementById('filterChips').innerHTML = filterDefs().map(f=>`
+    <div class="chip ${activeFilter===f.key?'active':''}" data-key="${f.key}">${f.label} <span class="n">${f.count}</span></div>
+  `).join('');
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click', ()=>{ activeFilter = c.dataset.key; renderChips(); renderTable(); });
+  });
+}
+function statusPill(d){
+  if(d.status==='OK') return `<span class="status-pill s-ok">● ${t('statusCompleted')}</span>`;
+  if(d.status==='PENDING') return `<span class="status-pill s-pending">● ${t('statusVerify')}</span>`;
+  if(d.note==='Spr') return `<span class="status-pill s-spr">● ${t('statusSpr')}</span>`;
+  return `<span class="status-pill s-maint">● ${t('statusMaint')}</span>`;
+}
+function matchesFilter(d){
+  if(activeFilter==='ALL') return true;
+  if(activeFilter==='STILL_MAINT') return d.status==='STILL' && d.note==='Under Maintenance';
+  if(activeFilter==='STILL_SPR') return d.status==='STILL' && d.note==='Spr';
+  return d.dept===activeFilter;
+}
+function renderTable(){
+  const tickets = getCurrentBuilding().tickets;
+  const term = searchTerm.trim().toLowerCase();
+  const rows = tickets.filter(d=>{
+    if(!matchesFilter(d)) return false;
+    if(!term) return true;
+    return d.loc.toLowerCase().includes(term) || d.notice.toLowerCase().includes(term) ||
+           noticeText(d).toLowerCase().includes(term) || deptLabel(d.dept).toLowerCase().includes(term);
+  });
+  const body = document.getElementById('tableBody');
+  if(rows.length===0){
+    body.innerHTML = `<tr class="empty-row"><td colspan="6">${t('noResults')}</td></tr>`;
+  } else {
+    body.innerHTML = rows.map(d=>`
+      <tr>
+        <td class="no-cell">${d.no}</td>
+        <td><span class="badge ${DEPT_META[d.dept]?DEPT_META[d.dept].badge:'b-civil'}">${deptLabel(d.dept)}</span></td>
+        <td class="loc-cell">${d.loc}</td>
+        <td>${noticeText(d)}</td>
+        <td>${statusPill(d)}</td>
+        <td><div class="row-actions">
+          <button class="icon-btn" onclick="openTicketModal('${d.id}')" title="edit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="icon-btn del" onclick="deleteTicket('${d.id}')" title="delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div></td>
+      </tr>
+    `).join('');
+  }
+  document.getElementById('resultCount').textContent = t('resultCount')(rows.length, stats.total);
+}
+document.getElementById('searchInput').addEventListener('input', (e)=>{ searchTerm = e.target.value; renderTable(); });
+
+function renderAll(){
+  if(!getCurrentBuilding()) return;
+  computeStats();
+  renderStaticText();
+  renderKpis();
+  renderBarList();
+  renderDonut();
+  renderSummary();
+  renderChips();
+  renderTable();
+}
+function setLang(lang){
+  LANG = lang;
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  ['btnEn','btnAr','btnEnLogin','btnArLogin'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    const isAr = id.includes('Ar');
+    el.classList.toggle('active', (lang==='ar')===isAr);
+  });
+  renderStaticText();
+  const lh = document.getElementById('loginHint');
+  if(lh) lh.textContent = lang==='ar' ? 'دخول تجريبي: admin / admin123' : 'Demo login: admin / admin123';
+  if(currentUser){
+    renderBuildingSelect();
+    renderAll();
+  }
+}
+
+/* ================= EXPORT CSV ================= */
+function exportCSV(){
+  const b = getCurrentBuilding();
+  const term = searchTerm.trim().toLowerCase();
+  const rows = b.tickets.filter(d=>{
+    if(!matchesFilter(d)) return false;
+    if(!term) return true;
+    return d.loc.toLowerCase().includes(term) || noticeText(d).toLowerCase().includes(term) || deptLabel(d.dept).toLowerCase().includes(term);
+  });
+  const cols = t('csvCols');
+  let csv = cols.join(',') + '\n';
+  rows.forEach(d=>{
+    let statusLabel;
+    if(d.status==='OK') statusLabel = t('statusCompleted');
+    else if(d.status==='PENDING') statusLabel = t('statusVerify');
+    else statusLabel = d.note==='Spr' ? t('statusSpr') : t('statusMaint');
+    csv += `${d.no},${deptLabel(d.dept)},${d.loc},"${noticeText(d)}",${statusLabel}\n`;
+  });
+  const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `AMOS_${b.name.replace(/[^a-z0-9]+/gi,'_')}_${LANG}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ================= BACKUP (full app state, since browser storage is not used) ================= */
+function saveBackup(){
+  const payload = {users:USERS, buildings:BUILDINGS, currentBuildingId, savedAt:new Date().toISOString()};
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `AMOS_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function loadBackupFile(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const payload = JSON.parse(e.target.result);
+      if(!payload.buildings || !payload.users) throw new Error('bad format');
+      USERS = payload.users;
+      BUILDINGS = payload.buildings;
+      currentBuildingId = payload.currentBuildingId || BUILDINGS[0].id;
+      renderBuildingSelect();
+      renderAll();
+      alert(t('loadedBackup'));
+    }catch(err){ alert(t('backupError')); }
+  };
+  reader.readAsText(file);
+  evt.target.value='';
+}
+
+/* ================= IMPORT: EXCEL / CSV / PDF ================= */
+function normStatus(rawStatus, rawNote){
+  const s = String(rawStatus||'').trim().toUpperCase();
+  const n = String(rawNote||'').trim().toUpperCase();
+  if(!s || s==='_' || s==='-' || s==='—'){ return {status:'PENDING', note:''}; }
+  if(['OK','DONE','COMPLETE','COMPLETED','CLOSED','YES'].includes(s)){ return {status:'OK', note:''}; }
+  if(n.includes('SPR') || n.includes('SPARE')){ return {status:'STILL', note:'Spr'}; }
+  return {status:'STILL', note:'Under Maintenance'};
+}
+function rowsFromSheetArray(aoa){
+  const headerKeys = {
+    no:/^\s*(no\.?|j\.?o\.?|job\s*order|#)\s*$/i,
+    dept:/^\s*(part|dept|department|section)\s*$/i,
+    loc:/^\s*(complaints?\s*location|location|loc)\s*$/i,
+    notice:/^\s*(notice|complaint|issue|description)\s*$/i,
+    status:/^\s*(order\s*status|status)\s*$/i,
+    note:/^\s*(note|notes|remarks?)\s*$/i
+  };
+  let headerRowIdx = -1, colMap = null;
+  for(let r=0; r<Math.min(6, aoa.length); r++){
+    const row = aoa[r].map(c=>String(c||''));
+    const map = {};
+    row.forEach((cell,ci)=>{ Object.keys(headerKeys).forEach(k=>{ if(headerKeys[k].test(cell)) map[k]=ci; }); });
+    if(map.notice!==undefined && (map.loc!==undefined || map.dept!==undefined)){ headerRowIdx = r; colMap = map; break; }
+  }
+  const out = [];
+  let no = 1;
+  const startRow = headerRowIdx>=0 ? headerRowIdx+1 : 0;
+  const cm = colMap || {no:0, dept:1, loc:2, notice:3, status:4, note:5};
+  for(let r=startRow; r<aoa.length; r++){
+    const row = aoa[r];
+    if(!row || row.every(c=>c===undefined || c===null || String(c).trim()==='')) continue;
+    const rawDept = cm.dept!==undefined ? row[cm.dept] : row[1];
+    const rawLoc = cm.loc!==undefined ? row[cm.loc] : row[2];
+    const rawNotice = cm.notice!==undefined ? row[cm.notice] : row[3];
+    const rawStatus = cm.status!==undefined ? row[cm.status] : row[4];
+    const rawNote = cm.note!==undefined ? row[cm.note] : row[5];
+    if(!rawNotice || String(rawNotice).trim()==='') continue;
+    const {status, note} = normStatus(rawStatus, rawNote);
+    out.push({no:no++, dept:normalizeDeptCode(rawDept), loc:String(rawLoc||'').trim()||'—', notice:titleCase(String(rawNotice).trim()), status, note});
+  }
+  return out;
+}
+function importExcelFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const wb = XLSX.read(e.target.result, {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+        resolve(rowsFromSheetArray(aoa));
+      }catch(err){ reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+async function importPdfFile(file){
+  if(!window.pdfjsLib){ throw new Error('pdf.js not loaded'); }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  let lines = [];
+  for(let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const byY = {};
+    content.items.forEach(it=>{
+      const y = Math.round(it.transform[5]/2)*2;
+      if(!byY[y]) byY[y]=[];
+      byY[y].push({x:it.transform[4], str:it.str});
+    });
+    const ys = Object.keys(byY).map(Number).sort((a,b)=>b-a);
+    ys.forEach(y=>{
+      const items = byY[y].sort((a,b)=>a.x-b.x);
+      const lineText = items.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+      if(lineText) lines.push(lineText);
+    });
+  }
+  return rowsFromTextLines(lines);
+}
+const STATUS_TOKENS = ['OK','STILL','PENDING'];
+function rowsFromTextLines(lines){
+  const out = [];
+  lines.forEach(line=>{
+    const tokens = line.split(' ').filter(Boolean);
+    if(tokens.length < 4) return;
+    if(!/^\d+$/.test(tokens[0])) return;
+    const no = parseInt(tokens[0],10);
+    const dept = tokens[1];
+    const loc = tokens[2];
+    const rest = tokens.slice(3);
+    let statusIdx = -1;
+    for(let i=0;i<rest.length;i++){ if(STATUS_TOKENS.includes(rest[i].toUpperCase())){ statusIdx = i; break; } }
+    if(statusIdx === -1) return;
+    const noticeWords = rest.slice(0, statusIdx);
+    const statusWord = rest[statusIdx].toUpperCase();
+    const noteWords = rest.slice(statusIdx+1);
+    if(noticeWords.length===0) return;
+    const {status, note} = normStatus(statusWord, noteWords.join(' '));
+    out.push({no, dept:normalizeDeptCode(dept), loc, notice:titleCase(noticeWords.join(' ')), status, note});
+  });
+  return out;
+}
+function showBanner(kind, html){
+  const el = document.getElementById('importBanner');
+  el.className = 'import-banner show ' + kind;
+  el.innerHTML = html;
+}
+function hideBanner(){ document.getElementById('importBanner').classList.remove('show'); }
+async function handleFileSelect(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const b = getCurrentBuilding();
+  if(!b){ alert(t('selectBuildingFirst')); evt.target.value=''; return; }
+  showBanner('busy', `<span>⏳ ${t('importing')}</span>`);
+  const ext = file.name.split('.').pop().toLowerCase();
+  try{
+    let rows = [];
+    if(['xlsx','xls','csv'].includes(ext)){
+      rows = await importExcelFile(file);
+      if(rows.length===0){ showBanner('err', `<span>⚠ ${t('importEmpty')(file.name)}</span><button onclick="hideBanner()">${t('dismiss')}</button>`); return; }
+      rows.forEach(r=>{ r.no = b.nextNo++; r.id = 't'+Date.now()+Math.random().toString(36).slice(2,7); b.tickets.push(r); });
+      renderAll();
+      showBanner('ok', `<span>✓ ${t('importOkExcel')(rows.length, file.name)}</span><button onclick="hideBanner()">${t('dismiss')}</button>`);
+    } else if(ext==='pdf'){
+      rows = await importPdfFile(file);
+      if(rows.length===0){ showBanner('err', `<span>⚠ ${t('importEmpty')(file.name)}</span><button onclick="hideBanner()">${t('dismiss')}</button>`); return; }
+      rows.forEach(r=>{ r.no = b.nextNo++; r.id = 't'+Date.now()+Math.random().toString(36).slice(2,7); b.tickets.push(r); });
+      renderAll();
+      showBanner('ok', `<span>✓ ${t('importOkPdf')(rows.length, file.name)}</span><button onclick="hideBanner()">${t('dismiss')}</button>`);
+    } else {
+      showBanner('err', `<span>⚠ ${t('importErr')(file.name)}</span><button onclick="hideBanner()">${t('dismiss')}</button>`);
+    }
+  }catch(err){
+    console.error(err);
+    showBanner('err', `<span>⚠ ${t('importErr')(file.name)}</span><button onclick="hideBanner()">${t('dismiss')}</button>`);
+  }
+  evt.target.value = '';
+}
+
+/* ================= INIT ================= */
+setLang('en');
+document.getElementById('loginHint').textContent = LANG==='ar' ? 'دخول تجريبي: admin / admin123' : 'Demo login: admin / admin123';
+
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
